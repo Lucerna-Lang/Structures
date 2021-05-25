@@ -89,4 +89,38 @@ impl Statement {
         }
         Ok(dat)
     }
+    pub fn as_func(&self) -> Box<dyn Fn(&mut Env)> {
+        let s = self.clone();
+        match s.raw_get(1).as_str() {
+            "->" | "=" => {
+                let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
+                Box::new(move |e2| {
+                    let val = parse_exp(&s.raw_get(2), e2, &s.clone());
+                    if let Ok(v) = val {
+                        e2.set_variable(&name, v);
+                    } else if let Err(err_msg) = val {
+                        println!("{} - Line {}", err_msg, s.line());
+                        e2.exit();
+                    }
+                })
+            },
+            _ => {
+                Box::new(move |mut e2| {
+                    let v = e2.get(&s.first());
+                    if let Some(DefaultTypes::Function(f)) = v {
+                        let t2 = s.get_function_call_args_indexed(e2, &s.first());
+                        match t2 {
+                            Ok(call_args) => {
+                                let _s = f.call(&mut e2, call_args);
+                            },
+                            Err(err_msg) => {
+                                println!("{} - Line {}", err_msg, s.line());
+                                e2.exit();
+                            }
+                        }
+                    }
+                })
+            }
+        }
+    }
 }
