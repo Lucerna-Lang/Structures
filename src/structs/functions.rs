@@ -1,7 +1,6 @@
 use super::Statements;
 use crate::structs::{DefaultTypes, Statement, Env, Table};
 use std::rc::Rc;
-use crate::parse_exp;
 use std::fmt::{Debug, Formatter};
 use core::fmt;
 
@@ -49,56 +48,7 @@ impl Function {
     pub fn parse_func(&mut self) {
         let mut k: Vec<Box<dyn Fn(&mut Env)>> = Vec::new();
         for sr in &self.data {
-            let s = sr.clone();
-            match s.raw_get(1).as_str() {
-                "->" => {
-                    let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
-                    k.push(Box::new(move |e2| {
-                        let val = parse_exp(&s.raw_get(2), e2, &s.clone());
-                        if let Ok(v) = val {
-
-                            e2.set_variable(&name, v);
-                        } else if let Err(err_msg) = val {
-                            println!("{} - Line {}", err_msg, s.line());
-                            e2.exit();
-                        }
-                    }));
-                }, // Handle assignment
-                "=" => {
-                    let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
-                    k.push(Box::new(move |e2| {
-                        let val = parse_exp(&s.raw_get(2), e2, &s.clone());
-                        if let Ok(v) = val {
-                            if !e2.contains(&name) {
-                                panic!("Attempting to re-assign to non-existent variable")
-                            }
-
-                            e2.set_variable(&name, v);
-                        } else if let Err(err_msg) = val {
-                            println!("{} - Line {}", err_msg, s.line());
-                            e2.exit();
-                        }
-                    }));
-
-                }, // Handle initialization ,
-                _ => {
-                    k.push(Box::new(move |mut e2| {
-                        let v = e2.get(&s.first());
-                        if let Some(DefaultTypes::Function(f)) = v {
-                            let t2 = s.get_function_call_args_indexed(e2, &s.first());
-                            match t2 {
-                                Ok(call_args) => {
-                                    let _s = f.call(&mut e2, call_args);
-                                },
-                                Err(err_msg) => {
-                                    println!("{} - Line {}", err_msg, s.line());
-                                    e2.exit();
-                                }
-                            }
-                        }
-                    }));
-                }
-            }
+            k.push(sr.clone().as_func());
         }
         self.func = Some(Rc::new(move |e: &mut Env, v: Vec<DefaultTypes>| -> Vec<DefaultTypes> {
             let mut e3 = e;
