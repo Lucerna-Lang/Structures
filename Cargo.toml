@@ -1,0 +1,8 @@
+[package]
+name = "structures"
+version = "0.4.0"
+authors = ["Kyando_2 <amehikoji@gmail.com>", "Jonesloto"]
+edition = "2018"
+
+
+[dependencies]
