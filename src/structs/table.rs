@@ -1,8 +1,7 @@
 use crate::structs::DefaultTypes;
 
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::slice::Iter;
-
 
 #[derive(Clone, Debug)]
 pub struct Pairs {
@@ -27,9 +26,7 @@ impl Pairs {
 
 impl Table {
     pub fn new() -> Table {
-        Table {
-            data: vec!(),
-        }
+        Table { data: vec![] }
     }
     pub fn iter_data(&self) -> Iter<Pairs> {
         self.data.iter()
@@ -63,7 +60,10 @@ impl Table {
                 }
             }
         }
-        self.data.push(Pairs { key: DefaultTypes::Str(s2), value: v } );
+        self.data.push(Pairs {
+            key: DefaultTypes::Str(s2),
+            value: v,
+        });
     }
 }
 
@@ -72,4 +72,3 @@ impl Default for Table {
         Table::new()
     }
 }
-
