@@ -1,6 +1,6 @@
 // Interpreter Env
-use super::{Variables, DefaultTypes};
-use crate::structs::{Variable};
+use super::{DefaultTypes, Variables};
+use crate::structs::Variable;
 
 #[derive(Clone)]
 pub struct Env {
@@ -12,20 +12,23 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Self {
-        Env { vars: Vec::new(), names: Vec::new(), return_value: None, is_exit: false}
+        Env {
+            vars: Vec::new(),
+            names: Vec::new(),
+            return_value: None,
+            is_exit: false,
+        }
     }
     pub fn contains(&self, v: &str) -> bool {
         self.names.contains(&String::from(v))
     }
     pub fn add_variable(&mut self, name: &str, value: DefaultTypes) {
-        self.vars.push ( Variable::new(String::from(name), value ));
-        self.names.push ( String::from(name) );
+        self.vars.push(Variable::new(String::from(name), value));
+        self.names.push(String::from(name));
     }
     pub fn remove(&mut self, name: &str) {
         let mut i = 0;
-        let check = |s| {
-            s == name
-        };
+        let check = |s| s == name;
         while i != self.names.len() {
             let r = self.names[i].clone();
             if check(r) {
@@ -34,7 +37,6 @@ impl Env {
                 i += 1;
             }
         }
-
     }
     pub fn return_f(&mut self, v: Vec<DefaultTypes>) {
         self.return_value = Some(v);

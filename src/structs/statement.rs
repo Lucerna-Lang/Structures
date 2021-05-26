@@ -1,6 +1,6 @@
 // Parser semi-types
-use crate::parse_exp;
 use super::{Debug, DefaultTypes, Env};
+use crate::parse_exp;
 
 #[derive(Debug, Clone)]
 pub struct Statement {
@@ -12,7 +12,12 @@ pub struct Statement {
 
 impl Statement {
     pub fn new(raw: Vec<String>, line: u32) -> Self {
-        Statement { raw, data: None, in_scope: false, line }
+        Statement {
+            raw,
+            data: None,
+            in_scope: false,
+            line,
+        }
     }
     pub fn raw(&self) -> &Vec<String> {
         &self.raw
@@ -34,7 +39,7 @@ impl Statement {
         if self.raw.len() < 3 {
             false
         } else {
-            (self.raw_get(1) == "->" || self.raw_get(1)  == "=") && (self.raw_get(2) == "{")
+            (self.raw_get(1) == "->" || self.raw_get(1) == "=") && (self.raw_get(2) == "{")
         }
     }
     pub fn is_in_scope(&self) -> bool {
@@ -44,7 +49,11 @@ impl Statement {
         self.in_scope = true;
     }
     pub fn is_scope_end(&self) -> bool {
-        self.raw.get(self.raw.len()-2).unwrap_or(&String::from("")).as_str() == "}"
+        self.raw
+            .get(self.raw.len() - 2)
+            .unwrap_or(&String::from(""))
+            .as_str()
+            == "}"
     }
     pub fn raw_get(&self, i: usize) -> String {
         String::from(self.raw.get(i).unwrap_or(&String::from("")))
@@ -56,15 +65,21 @@ impl Statement {
         self.line
     }
     pub fn first(&self) -> String {
-       self.raw_get(0).replace("(", "")
+        self.raw_get(0).replace("(", "")
     }
-    pub fn last(&self) -> String { self.raw_get(self.raw.len()-2)}
+    pub fn last(&self) -> String {
+        self.raw_get(self.raw.len() - 2)
+    }
     pub fn is_raw_function_call(&self) -> bool {
-        self.raw_get(0).ends_with('(') && self.raw_get(self.raw.len()-2) == ")"
+        self.raw_get(0).ends_with('(') && self.raw_get(self.raw.len() - 2) == ")"
     }
-    pub fn get_function_call_args_indexed(&self, env: &mut Env, s: &str) -> Result<Vec<DefaultTypes>, String> {
+    pub fn get_function_call_args_indexed(
+        &self,
+        env: &mut Env,
+        s: &str,
+    ) -> Result<Vec<DefaultTypes>, String> {
         let mut started = false;
-        let mut dat = vec!();
+        let mut dat = vec![];
         let mut in_nest = 0_isize;
         for raw in &self.raw().clone() {
             if started {
@@ -85,7 +100,6 @@ impl Statement {
             if raw.starts_with(&s) {
                 started = true;
             }
-
         }
         Ok(dat)
     }
@@ -103,24 +117,22 @@ impl Statement {
                         e2.exit();
                     }
                 })
-            },
-            _ => {
-                Box::new(move |mut e2| {
-                    let v = e2.get(&s.first());
-                    if let Some(DefaultTypes::Function(f)) = v {
-                        let t2 = s.get_function_call_args_indexed(e2, &s.first());
-                        match t2 {
-                            Ok(call_args) => {
-                                let _s = f.call(&mut e2, call_args);
-                            },
-                            Err(err_msg) => {
-                                println!("{} - Line {}", err_msg, s.line());
-                                e2.exit();
-                            }
+            }
+            _ => Box::new(move |mut e2| {
+                let v = e2.get(&s.first());
+                if let Some(DefaultTypes::Function(f)) = v {
+                    let t2 = s.get_function_call_args_indexed(e2, &s.first());
+                    match t2 {
+                        Ok(call_args) => {
+                            let _s = f.call(&mut e2, call_args);
+                        }
+                        Err(err_msg) => {
+                            println!("{} - Line {}", err_msg, s.line());
+                            e2.exit();
                         }
                     }
-                })
-            }
+                }
+            }),
         }
     }
 }

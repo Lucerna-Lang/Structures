@@ -1,8 +1,8 @@
 use super::Statements;
-use crate::structs::{DefaultTypes, Statement, Env, Table};
-use std::rc::Rc;
-use std::fmt::{Debug, Formatter};
+use crate::structs::{DefaultTypes, Env, Statement, Table};
 use core::fmt;
+use std::fmt::{Debug, Formatter};
+use std::rc::Rc;
 
 // Special lang types
 pub type DynFunc = dyn Fn(&mut Env, Vec<DefaultTypes>) -> Vec<DefaultTypes>;
@@ -10,7 +10,7 @@ pub type DynFunc = dyn Fn(&mut Env, Vec<DefaultTypes>) -> Vec<DefaultTypes>;
 pub struct Function {
     data: Statements,
     func: Option<Rc<DynFunc>>,
-    name: Option<String>
+    name: Option<String>,
 }
 
 impl Function {
@@ -18,7 +18,7 @@ impl Function {
         Function {
             data: vec![],
             func: Some(func),
-            name: None
+            name: None,
         }
     }
     pub fn call(&self, env: &mut Env, vs: Vec<DefaultTypes>) -> Vec<DefaultTypes> {
@@ -29,7 +29,7 @@ impl Function {
         Function {
             data,
             func: None,
-            name: None
+            name: None,
         }
     }
     pub fn push_raw(&mut self, data: Statement) {
@@ -50,35 +50,36 @@ impl Function {
         for sr in &self.data {
             k.push(sr.clone().as_func());
         }
-        self.func = Some(Rc::new(move |e: &mut Env, v: Vec<DefaultTypes>| -> Vec<DefaultTypes> {
-            let mut e3 = e;
-            let mut args = Table::new();
-            for (i, x) in v.iter().enumerate() {
-                if e3.exited() {
-                    break;
+        self.func = Some(Rc::new(
+            move |e: &mut Env, v: Vec<DefaultTypes>| -> Vec<DefaultTypes> {
+                let mut e3 = e;
+                let mut args = Table::new();
+                for (i, x) in v.iter().enumerate() {
+                    if e3.exited() {
+                        break;
+                    }
+                    args.set(i.to_string(), x.clone());
                 }
-                args.set(i.to_string(), x.clone());
-            }
-            e3.set_variable("args", args.into());
-            for s in &k {
-                if e3.exited() {
-                    break;
+                e3.set_variable("args", args.into());
+                for s in &k {
+                    if e3.exited() {
+                        break;
+                    }
+                    s(&mut e3);
                 }
-                s(&mut e3);
-            }
 
-            e3.return_val()
-        }));
+                e3.return_val()
+            },
+        ));
     }
 }
-
 
 impl Clone for Function {
     fn clone(&self) -> Self {
         Function {
             data: self.data.clone(),
             func: self.func.clone(),
-            name: None
+            name: None,
         }
     }
 }

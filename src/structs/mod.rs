@@ -1,17 +1,16 @@
 mod env;
-mod statement;
 mod functions;
+mod statement;
 mod table;
 
-pub use statement::Statement;
 pub use env::Env;
-pub use functions::{Function, DynFunc};
+pub use functions::{DynFunc, Function};
+pub use statement::Statement;
+use std::fmt::Debug;
 pub use table::Table;
-use std::fmt::{Debug};
 
 pub type Statements = Vec<Statement>;
 pub type Variables = Vec<Variable>;
-
 
 // Default lang types
 #[derive(Clone, Debug)]
@@ -29,10 +28,9 @@ pub struct Variable {
     pub value: DefaultTypes,
 }
 
-
 impl Variable {
-    pub fn new(name: String, value: DefaultTypes) -> Self{
-        Variable {name, value}
+    pub fn new(name: String, value: DefaultTypes) -> Self {
+        Variable { name, value }
     }
     pub fn name(&self) -> &String {
         &self.name
@@ -50,4 +48,3 @@ impl From<Table> for DefaultTypes {
         DefaultTypes::Table(s)
     }
 }
-
