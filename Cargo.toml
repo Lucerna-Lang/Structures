@@ -1,6 +1,6 @@
 [package]
 name = "structures"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["Kyando_2 <amehikoji@gmail.com>", "Jonesloto"]
 edition = "2018"
 
