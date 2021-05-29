@@ -27,7 +27,8 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> Result<DefaultType
         Ok(DefaultTypes::Str(
             String::from(&s[1..s.len() - 1])
                 .replace("|_", " ")
-                .replace("|-", "\n"),
+                .replace("|-", "\n")
+                .replace("|:", "/"),
         ))
     } else if s == "true" {
         Ok(DefaultTypes::Bool(true))
