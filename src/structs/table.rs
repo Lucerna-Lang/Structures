@@ -49,24 +49,17 @@ impl TableImpl {
             }
         )
     }
-    fn remove(&mut self, value: DefaultTypes) -> Result<&'static str, &'static str> {
-        let mut removed = false;
+    fn remove(&mut self, value: DefaultTypes) {
         for (i, x) in self.data.clone().iter().enumerate() {
             match (&value, x.key()) {
                 (DefaultTypes::Str(s), DefaultTypes::Str(other_s)) => {
                     if s == other_s {
                         self.data.remove(i);
-                        removed = true;
                         break;
                     }
                 },
                 _ => {}
             }
-        }
-        if removed {
-            Ok("")
-        } else {
-            Err("")
         }
     }
         
