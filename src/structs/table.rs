@@ -1,94 +1,22 @@
 use crate::structs::DefaultTypes;
 
 use std::fmt::Debug;
-use std::slice::Iter;
+use std::collections::hash_map::Iter;
 
-#[derive(Clone, Debug)]
-pub struct Pairs {
-    key: DefaultTypes,
-    value: DefaultTypes,
-}
+use super::bridge::TableImpl;
 
 #[derive(Clone, Debug)]
 pub struct Table {
-    imp : TableImpl,
-}
-
-#[derive(Clone, Debug)]
-struct TableImpl {
-    data: Vec<Pairs>,
-}
-
-impl TableImpl {
-    fn new() -> TableImpl {
-        TableImpl { data: Vec::new() }
-    }
-    fn get(&self, s2: &str) -> Option<DefaultTypes> {
-        let mut r = None;
-        for x in &self.data {
-            if let DefaultTypes::Str(s1) = x.key.clone() {
-                if s1 == s2 {
-                    r = Some(x.value.clone());
-                }
-            }
-        }
-        r
-    }
-    fn set(&mut self, k: String, v: DefaultTypes) {
-        self.remove(DefaultTypes::Str(k.clone()));
-        self.data.push(Pairs {
-            key: DefaultTypes::Str(k),
-            value: v,
-        });
-    }
-    fn raw_push(&mut self, k: DefaultTypes, v: DefaultTypes) {
-        self.data.push(
-            Pairs {
-                key: k,
-                value: v,
-            }
-        )
-    }
-    fn remove(&mut self, value: DefaultTypes) {
-        for (i, x) in self.data.clone().iter().enumerate() {
-            match (&value, x.key()) {
-                (DefaultTypes::Str(s), DefaultTypes::Str(other_s)) => {
-                    if s == other_s {
-                        self.data.remove(i);
-                        break;
-                    }
-                },
-                _ => {}
-            }
-        }
-    }
-        
-    fn iter_data(&self) -> Iter<Pairs> {
-        self.data.iter()
-    }
-    fn len(&self) -> usize {
-        self.data.len()
-    }
-    fn is_empty(&self) -> bool {
-        self.data.is_empty()
-    }
-}
-
-impl Pairs {
-    pub fn key(&self) -> &DefaultTypes {
-        &self.key
-    }
-
-    pub fn value(&self) -> &DefaultTypes {
-        &self.value
-    }
+    imp: TableImpl,
 }
 
 impl Table {
     pub fn new() -> Table {
-        Table { imp: TableImpl::new() }
+        Table {
+            imp: TableImpl::new(),
+        }
     }
-    pub fn iter_data(&self) -> Iter<Pairs> {
+    pub fn iter_data(&self) -> Iter<String, DefaultTypes> {
         self.imp.iter_data()
     }
 
