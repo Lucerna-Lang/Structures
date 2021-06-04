@@ -1,69 +1,39 @@
 use crate::structs::DefaultTypes;
 
 use std::fmt::Debug;
-use std::slice::Iter;
+use std::collections::hash_map::Iter;
 
-#[derive(Clone, Debug)]
-pub struct Pairs {
-    key: DefaultTypes,
-    value: DefaultTypes,
-}
+use super::bridge::TableImpl;
 
 #[derive(Clone, Debug)]
 pub struct Table {
-    data: Vec<Pairs>,
-}
-
-impl Pairs {
-    pub fn key(&self) -> &DefaultTypes {
-        &self.key
-    }
-
-    pub fn value(&self) -> &DefaultTypes {
-        &self.value
-    }
+    imp: TableImpl,
 }
 
 impl Table {
     pub fn new() -> Table {
-        Table { data: vec![] }
+        Table {
+            imp: TableImpl::new(),
+        }
     }
-    pub fn iter_data(&self) -> Iter<Pairs> {
-        self.data.iter()
+    pub fn iter_data(&self) -> Iter<String, DefaultTypes> {
+        self.imp.iter_data()
     }
 
     pub fn raw_get(&self, s2: &str) -> Option<DefaultTypes> {
-        let mut r = None;
-        for x in &self.data {
-            if let DefaultTypes::Str(s1) = x.key.clone() {
-                if s1 == s2 {
-                    r = Some(x.value.clone());
-                }
-            }
-        }
-        r
+        self.imp.get(s2)
     }
 
     pub fn len(&self) -> usize {
-        self.data.len()
+        self.imp.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
+        self.imp.is_empty()
     }
 
-    pub fn set(&mut self, s2: String, v: DefaultTypes) {
-        for (i, x) in self.data.clone().iter().enumerate() {
-            if let DefaultTypes::Str(s1) = x.key.clone() {
-                if s1 == s2 {
-                    self.data.remove(i);
-                }
-            }
-        }
-        self.data.push(Pairs {
-            key: DefaultTypes::Str(s2),
-            value: v,
-        });
+    pub fn set(&mut self, k: String, v: DefaultTypes) {
+        self.imp.set(k, v);
     }
 }
 
