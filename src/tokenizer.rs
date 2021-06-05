@@ -18,7 +18,6 @@ impl ParsedTable {
         match &self.table {
 
             DefaultTypes::Table(t) => {
-                dbg!(&t);
                 t.raw_get(&self.key).expect("Invalid table")
             },
             _ => {
@@ -40,7 +39,6 @@ impl ParsedTable {
         last_t.set(self.key.clone(), val);
         let nests = self.nest[0..self.nest.len()].iter().collect::<Vec<_>>();
         let elems: Vec<(&String, &Table)> = nests[0..nests.len()].iter().map(|(x, y)| (x, y)).collect();
-        dbg!(&elems);
         for (k, mut t) in elems {
             let mut newt = t.clone();
             newt.set(k.to_string(), DefaultTypes::Table(last_t.clone()));
