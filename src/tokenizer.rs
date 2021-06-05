@@ -73,6 +73,13 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
     let k; // Wtf is this idk
     let t = String::from(ss);
     let mut found = None;
+    if ss == "[]" {
+        found = Some(ParsedResult::Normal(
+            DefaultTypes::Table(
+                Table::new()
+            )
+        ));
+    }
     if t.contains(".") && !ss.starts_with('"') {
         let split = t.split(".");
         let cc = env.get(split.clone().collect::<Vec<&str>>().get(0).unwrap()).expect("Could not find tab");
