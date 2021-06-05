@@ -1,5 +1,6 @@
 use crate::structs::{Debug, DefaultTypes, Env, Statement};
 use crate::parse_exp;
+use crate::tokenizer::ParsedResult;
 
 #[derive(Debug, Clone)]
 pub struct StatementImpl {
@@ -84,7 +85,7 @@ impl StatementImpl {
             if started {
                 if raw.ends_with('(') {
                     if in_nest == 0 {
-                        dat.push(parse_exp(raw, env, &self.clone().into())?);
+                        dat.push(parse_exp(raw, env, &self.clone().into()).as_type()?);
                     }
                     in_nest += 1;
                 } else if raw.ends_with(')') {
@@ -93,7 +94,7 @@ impl StatementImpl {
                         break;
                     }
                 } else if in_nest == 0 {
-                    dat.push(parse_exp(raw, env, &self.clone().into())?);
+                    dat.push(parse_exp(raw, env, &self.clone().into()).as_type()?);
                 }
             }
             if raw.starts_with(&s) {
@@ -108,12 +109,33 @@ impl StatementImpl {
             "->" | "=" => {
                 let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
                 Box::new(move |e2| {
+                    let setted = parse_exp(&name, e2, &s.clone().into());
                     let val = parse_exp(&s.raw_get(2), e2, &s.clone().into());
-                    if let Ok(v) = val {
-                        e2.set_variable(&name, v);
-                    } else if let Err(err_msg) = val {
-                        println!("{} - Line {}", err_msg, s.line());
-                        e2.exit();
+                    match val {
+                        ParsedResult::Table(v) => {
+                            match setted {
+                                ParsedResult::Table(table) => {
+                                    e2.set_variable(table.name(), table.set(v.value()));
+                                }
+                                ParsedResult::Error(_) | ParsedResult::Normal(_) => {
+                                    e2.set_variable(&name, v.value());
+                                }
+                            }
+                        },
+                        ParsedResult::Normal(s) => {
+                            match setted {
+                                ParsedResult::Table(table) => {
+                                    e2.set_variable(table.name(), table.set(s));
+                                }
+                                ParsedResult::Error(_) | ParsedResult::Normal(_) => {
+                                    e2.set_variable(&name, s);
+                                }
+                            }
+                        },
+                        ParsedResult::Error(s) => {
+                            println!("{}", s);
+                            e2.exited();
+                        }
                     }
                 })
             }
