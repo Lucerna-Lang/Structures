@@ -18,6 +18,10 @@ impl Statement {
             imp,
         }
     }
+    pub fn with_setter(mut self, setter: DefaultTypes) -> Self {
+        self.imp.with_setter(setter);
+        self
+    }
     pub fn raw(&self) -> &Vec<String> {
         self.imp.raw()
     }

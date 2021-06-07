@@ -1,5 +1,6 @@
 use crate::structs::{DefaultTypes, DefaultTypes::Function, Env, Statement, Table};
 
+#[derive(Clone)]
 pub struct ParsedTable {
     table: DefaultTypes,
     key: String,
@@ -81,7 +82,8 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
         ));
     }
     if t.contains(".") && !ss.starts_with('"') {
-        let split = t.split(".");
+        let sk = (t.split("(").next().unwrap()).to_string();
+        let split = sk.split(".");
         let cc = env.get(split.clone().collect::<Vec<&str>>().get(0).unwrap()).expect("Could not find tab");
         if let DefaultTypes::Table(mut current_t) = cc.clone() {
             let iterer = split.collect::<Vec<&str>>();
@@ -97,15 +99,22 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
                 stuff.push((iterer[1].to_string(), current_t.clone()))
             }
             stuff.reverse();
-            let last_frag = &iterer.get(iterer.len()-1).unwrap();
+            let last_frag = &iterer.last().unwrap();
+            let tab = ParsedTable {
+                table: DefaultTypes::from(current_t),
+                key: last_frag.to_string(),
+                nest: stuff,
+                name: iterer[0].parse().unwrap(),
+            };
             found = Some(ParsedResult::Table(
-                ParsedTable{
-                    table: DefaultTypes::from(current_t),
-                    key: last_frag.to_string(),
-                    nest: stuff,
-                    name: iterer[0].parse().unwrap(),
-                }
+                tab.clone()
             ));
+            if t.ends_with('(') {
+                if let DefaultTypes::Function(func) = tab.value() {
+                    let args = get_args(&t, env, sss);
+                    found = Some(ParsedResult::Normal(func.call(env, args.expect("oop"))[0].clone()));
+                }
+            }
         } else {
             found = Some(ParsedResult::Error("Invalid stuff lol".parse().unwrap()));
         }
@@ -157,7 +166,7 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
                 _ => ParsedResult::Normal(dt),
             }
         } else {
-            let err = format!("{}\"{}\"", "Could not parse expression: ", &t);
+            let err = format!("{}:{}", "Could not parse expression: ", &t);
             ParsedResult::Error(err)
         }
     }
