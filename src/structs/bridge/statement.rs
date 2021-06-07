@@ -5,6 +5,7 @@ use crate::tokenizer::ParsedResult;
 #[derive(Debug, Clone)]
 pub struct StatementImpl {
     pub raw: Vec<String>,
+    setter: Option<DefaultTypes>,
     pub(super) data: Option<String>,
     in_scope: bool,
     line: u32,
@@ -14,10 +15,15 @@ impl StatementImpl {
     pub fn new(raw: Vec<String>, line: u32) -> Self {
         StatementImpl {
             raw,
+            setter: None,
             data: None,
             in_scope: false,
             line,
         }
+    }
+    
+    pub fn with_setter(&mut self, setter: DefaultTypes) {
+        self.setter = Some(setter);
     }
     pub fn raw(&self) -> &Vec<String> {
         &self.raw
@@ -110,7 +116,10 @@ impl StatementImpl {
                 let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
                 Box::new(move |e2| {
                     let setted = parse_exp(&name, e2, &s.clone().into());
-                    let val = parse_exp(&s.raw_get(2), e2, &s.clone().into());
+                    let mut val = parse_exp(&s.raw_get(2), e2, &s.clone().into());
+                    if let Some(setter) = &s.setter {
+                        val = ParsedResult::Normal(setter.clone());
+                    }
                     match val {
                         ParsedResult::Table(v) => {
                             match setted {
@@ -140,17 +149,28 @@ impl StatementImpl {
                 })
             }
             _ => Box::new(move |mut e2| {
-                let v = e2.get(&s.first());
-                if let Some(DefaultTypes::Function(f)) = v {
-                    let t2 = s.get_function_call_args_indexed(e2, &s.first());
-                    match t2 {
-                        Ok(call_args) => {
-                            let _s = f.call(&mut e2, call_args);
+                let v = parse_exp(&s.first(), e2, &s.clone().into());
+                let t2 = s.get_function_call_args_indexed(e2, &s.first());
+                match t2 {
+                    Ok(call_args) => {
+                        match v {
+                            ParsedResult::Table(tab) => {
+                                let f_func = tab.value();
+                                if let DefaultTypes::Function(m_func) = f_func {
+                                    m_func.call(&mut e2, call_args);
+                                }
+                            }
+                            _ => {
+                                let found_func = e2.get(&s.first()).unwrap();
+                                if let DefaultTypes::Function(m_func) = found_func {
+                                    m_func.call(&mut e2, call_args);
+                                }
+                            }
                         }
-                        Err(err_msg) => {
-                            println!("{} - Line {}", err_msg, s.line());
-                            e2.exit();
-                        }
+                    }
+                    Err(err_msg) => {
+                        println!("{} - Line {}", err_msg, s.line());
+                        e2.exit();
                     }
                 }
             }),
