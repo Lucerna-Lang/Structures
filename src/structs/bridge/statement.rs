@@ -5,6 +5,7 @@ use crate::tokenizer::ParsedResult;
 #[derive(Debug, Clone)]
 pub struct StatementImpl {
     pub raw: Vec<String>,
+    setter: Option<DefaultTypes>,
     pub(super) data: Option<String>,
     in_scope: bool,
     line: u32,
@@ -14,10 +15,16 @@ impl StatementImpl {
     pub fn new(raw: Vec<String>, line: u32) -> Self {
         StatementImpl {
             raw,
+            setter: None,
             data: None,
             in_scope: false,
             line,
+            
         }
+    }
+    
+    pub fn with_setter(&mut self, setter: DefaultTypes) {
+        self.setter = Some(setter);
     }
     pub fn raw(&self) -> &Vec<String> {
         &self.raw
