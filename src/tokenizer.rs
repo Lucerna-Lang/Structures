@@ -39,7 +39,7 @@ impl ParsedTable {
         let mut last_t = self.raw();
         last_t.set(self.key.clone(), val);
         let nests = self.nest[0..self.nest.len()].iter().collect::<Vec<_>>();
-        let elems: Vec<(&String, &Table)> = nests[0..nests.len()].iter().map(|(x, y)| (x, y)).collect();
+        let elems: Vec<(&String, &Table)> = nests[1..nests.len()].iter().map(|(x, y)| (x, y)).collect();
         for (k, mut t) in elems {
             let mut newt = t.clone();
             newt.set(k.to_string(), DefaultTypes::Table(last_t.clone()));
@@ -70,57 +70,53 @@ fn as_table(r: DefaultTypes) -> Table {
     }
 }
 
+fn handle_table(ss: &str, env: &mut Env, sss: &Statement) -> Option<ParsedResult> {
+    let t = ss.clone();
+    let mut found = None;
+    let sk = (t.split("(").next().unwrap()).to_string();
+    let split = sk.split(".");
+    let cc = env.get(split.clone().collect::<Vec<&str>>().get(0).unwrap()).expect("Could not find table");
+    if let DefaultTypes::Table(mut current_t) = cc.clone() {
+        let iterer = split.collect::<Vec<&str>>();
+        let mut stuff = Vec::new();
+        stuff.push((iterer[1].to_string(), current_t.clone()));
+        let slice;
+        slice = &iterer[1..iterer.len()-1];
+        if slice.len()>0 {
+            for (i, frag) in slice.iter().enumerate() {
+                current_t = as_table(current_t.raw_get(frag).unwrap());
+                stuff.push((frag.to_string(), current_t.clone()));
+            }
+        }
+        stuff.reverse();
+        let last_frag = &iterer.last().unwrap();
+        let tab = ParsedTable {
+            table: DefaultTypes::from(current_t),
+            key: last_frag.to_string(),
+            nest: stuff,
+            name: iterer[0].parse().unwrap(),
+        };
+        found = Some(ParsedResult::Table(
+            tab.clone()
+        ));
+        if t.ends_with('(') {
+            if let DefaultTypes::Function(func) = tab.value() {
+                let args = get_args(&t, env, sss);
+                found = Some(ParsedResult::Normal(func.call(env, args.expect("Could not find args"))[0].clone()))
+            }
+        }
+    } else {
+        found = Some(ParsedResult::Error("Invalid stuff lol".parse().unwrap()))
+    }
+    found
+}
 pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
     let k; // Wtf is this idk
     let t = String::from(ss);
-    let mut found = None;
     if ss == "[]" {
-        found = Some(ParsedResult::Normal(
-            DefaultTypes::Table(
-                Table::new()
-            )
-        ));
-    }
-    if t.contains(".") && !ss.starts_with('"') {
-        let sk = (t.split("(").next().unwrap()).to_string();
-        let split = sk.split(".");
-        let cc = env.get(split.clone().collect::<Vec<&str>>().get(0).unwrap()).expect("Could not find tab");
-        if let DefaultTypes::Table(mut current_t) = cc.clone() {
-            let iterer = split.collect::<Vec<&str>>();
-            let mut stuff = Vec::new();
-            let slice;
-            slice = &iterer[1..iterer.len()-1];
-            if slice.len()>0 {
-                for (i, frag) in slice.iter().enumerate() {
-                    current_t = as_table(current_t.raw_get(frag).unwrap());
-                    stuff.push((frag.to_string(), current_t.clone()));
-                }
-            } else {
-                stuff.push((iterer[1].to_string(), current_t.clone()))
-            }
-            stuff.reverse();
-            let last_frag = &iterer.last().unwrap();
-            let tab = ParsedTable {
-                table: DefaultTypes::from(current_t),
-                key: last_frag.to_string(),
-                nest: stuff,
-                name: iterer[0].parse().unwrap(),
-            };
-            found = Some(ParsedResult::Table(
-                tab.clone()
-            ));
-            if t.ends_with('(') {
-                if let DefaultTypes::Function(func) = tab.value() {
-                    let args = get_args(&t, env, sss);
-                    found = Some(ParsedResult::Normal(func.call(env, args.expect("oop"))[0].clone()));
-                }
-            }
-        } else {
-            found = Some(ParsedResult::Error("Invalid stuff lol".parse().unwrap()));
-        }
-    }
-    if !found.is_none() {
-        found.unwrap()
+        ParsedResult::Normal(DefaultTypes::Table(Table::new()))
+    } else if t.contains(".") && !ss.starts_with('"') {
+        handle_table(&t, env, sss).expect("Attempted to index non existing table")
     } else {
         if ss.starts_with('"') && ss.ends_with('"') {
             k = Ok(String::from(ss));
