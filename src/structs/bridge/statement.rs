@@ -109,44 +109,47 @@ impl StatementImpl {
         }
         Ok(dat)
     }
+    fn assignment(&self, my_clone: StatementImpl) -> Box<dyn Fn(&mut Env)> {
+        let name = my_clone.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
+        Box::new(move |e2| {
+            let setted = parse_exp(&name, e2, &my_clone.clone().into());
+            let mut val = parse_exp(&my_clone.raw_get(2), e2, &my_clone.clone().into());
+            if let Some(setter) = &my_clone.setter {
+                val = ParsedResult::Normal(setter.clone());
+            }
+            match val {
+                ParsedResult::Table(v) => {
+                    match setted {
+                        ParsedResult::Table(table) => {
+                            e2.set_variable(table.name(), table.set(v.value()));
+                        }
+                        ParsedResult::Error(_) | ParsedResult::Normal(_) => {
+                            e2.set_variable(&name, v.value());
+                        }
+                    }
+                },
+                ParsedResult::Normal(s) => {
+                    match setted {
+                        ParsedResult::Table(table) => {
+                            e2.set_variable(table.name(), table.set(s));
+                        }
+                        ParsedResult::Error(_) | ParsedResult::Normal(_) => {
+                            e2.set_variable(&name, s);
+                        }
+                    }
+                },
+                ParsedResult::Error(s) => {
+                    println!("{}", s);
+                    e2.exited();
+                }
+            }
+        })
+    }
     pub fn as_func(&self) -> Box<dyn Fn(&mut Env)> {
         let s = self.clone();
         match s.raw_get(1).as_str() {
             "->" | "=" => {
-                let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
-                Box::new(move |e2| {
-                    let setted = parse_exp(&name, e2, &s.clone().into());
-                    let mut val = parse_exp(&s.raw_get(2), e2, &s.clone().into());
-                    if let Some(setter) = &s.setter {
-                        val = ParsedResult::Normal(setter.clone());
-                    }
-                    match val {
-                        ParsedResult::Table(v) => {
-                            match setted {
-                                ParsedResult::Table(table) => {
-                                    e2.set_variable(table.name(), table.set(v.value()));
-                                }
-                                ParsedResult::Error(_) | ParsedResult::Normal(_) => {
-                                    e2.set_variable(&name, v.value());
-                                }
-                            }
-                        },
-                        ParsedResult::Normal(s) => {
-                            match setted {
-                                ParsedResult::Table(table) => {
-                                    e2.set_variable(table.name(), table.set(s));
-                                }
-                                ParsedResult::Error(_) | ParsedResult::Normal(_) => {
-                                    e2.set_variable(&name, s);
-                                }
-                            }
-                        },
-                        ParsedResult::Error(s) => {
-                            println!("{}", s);
-                            e2.exited();
-                        }
-                    }
-                })
+                self.assignment(s)
             }
             _ => Box::new(move |mut e2| {
                 let v = parse_exp(&s.first(), e2, &s.clone().into());
