@@ -35,11 +35,15 @@ impl Env {
     pub fn exited(&self) -> bool {
         self.imp.exited()
     }
-    pub fn exit(&mut self) {
-        self.imp.exit()
+    pub fn exit(&mut self, error_message: &str, line: u32) -> ! {
+        self.imp.exit(format!("{} - Line {}", error_message, line))
     }
+    pub fn cline(&self) -> u32 {self.imp.get_current_line()}
     pub fn return_val(&self) -> Vec<DefaultTypes> {
         self.imp.return_val()
+    }
+    pub fn setline(&mut self, ln: u32) {
+        self.imp.setline(ln);
     }
 }
 

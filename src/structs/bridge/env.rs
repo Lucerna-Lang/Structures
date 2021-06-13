@@ -6,6 +6,8 @@ pub struct EnvImpl {
     vars: HashMap<String, DefaultTypes>,
     return_value: Option<Vec<DefaultTypes>>,
     is_exit: bool,
+    exit_val: Option<String>,
+    current_line: u32,
 }
 
 impl EnvImpl {
@@ -14,6 +16,8 @@ impl EnvImpl {
             vars: HashMap::new(),
             return_value: None,
             is_exit: false,
+            exit_val: None,
+            current_line: 0,
         }
     }
     pub fn contains(&self, v: &str) -> bool {
@@ -34,8 +38,16 @@ impl EnvImpl {
     pub fn exited(&self) -> bool {
         self.is_exit
     }
-    pub fn exit(&mut self) {
+    pub fn exit(&mut self, exit_val: String) -> ! {
         self.is_exit = true;
+        eprintln!("{}", exit_val);
+        panic!()
+    }
+    pub fn setline(&mut self, ln: u32) {
+        self.current_line = ln;
+    }
+    pub fn get_current_line(&self) -> u32 {
+        self.current_line
     }
     pub fn return_val(&self) -> Vec<DefaultTypes> {
         self.return_value.clone().unwrap_or_default()

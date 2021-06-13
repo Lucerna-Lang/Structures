@@ -152,7 +152,12 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
                 DefaultTypes::Function(f) => {
                     if ss.ends_with('(') {
                         let args = get_args(&t, env, sss);
-                        ParsedResult::Normal(f.call(env, args.expect("oop"))[0].clone())
+                        let return_value = f.call(env, args.expect("oop"));
+                        if return_value.is_empty() {
+                            ParsedResult::Error(format!("Function {} did not return anything", &s))
+                        } else {
+                            ParsedResult::Normal(return_value[0].clone())
+                        }
                     } else {
                         ParsedResult::Normal(Function(f))
                     }
@@ -161,7 +166,7 @@ pub fn parse_exp(ss: &str, env: &mut Env, sss: &Statement) -> ParsedResult {
                 _ => ParsedResult::Normal(dt),
             }
         } else {
-            let err = format!("{}:{}", "Could not parse expression: ", &t);
+            let err = format!("{} {}", "Could not parse expression: ", &t);
             ParsedResult::Error(err)
         }
     }
