@@ -21,7 +21,7 @@ impl StatementImpl {
             line,
         }
     }
-    
+
     pub fn with_setter(&mut self, setter: DefaultTypes) {
         self.setter = Some(setter);
     }
@@ -109,71 +109,89 @@ impl StatementImpl {
         }
         Ok(dat)
     }
-    pub fn as_func(&self) -> Box<dyn Fn(&mut Env)> {
-        let s = self.clone();
-        match s.raw_get(1).as_str() {
-            "->" | "=" => {
-                let name = s.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
-                Box::new(move |e2| {
-                    let setted = parse_exp(&name, e2, &s.clone().into());
-                    let mut val = parse_exp(&s.raw_get(2), e2, &s.clone().into());
-                    if let Some(setter) = &s.setter {
-                        val = ParsedResult::Normal(setter.clone());
-                    }
-                    match val {
-                        ParsedResult::Table(v) => {
-                            match setted {
-                                ParsedResult::Table(table) => {
-                                    e2.set_variable(table.name(), table.set(v.value()));
-                                }
-                                ParsedResult::Error(_) | ParsedResult::Normal(_) => {
-                                    e2.set_variable(&name, v.value());
-                                }
-                            }
-                        },
-                        ParsedResult::Normal(s) => {
-                            match setted {
-                                ParsedResult::Table(table) => {
-                                    e2.set_variable(table.name(), table.set(s));
-                                }
-                                ParsedResult::Error(_) | ParsedResult::Normal(_) => {
-                                    e2.set_variable(&name, s);
-                                }
-                            }
-                        },
-                        ParsedResult::Error(s) => {
-                            println!("{}", s);
-                            e2.exited();
-                        }
-                    }
-                })
+    fn assignment(&self, my_clone: StatementImpl) -> Box<dyn Fn(&mut Env)> {
+        let name = my_clone.raw_get(0); // Necessarily exists since index 1 exists and whitespace characters were removed.
+        Box::new(move |e2| {
+            e2.setline(my_clone.line);
+            let setted = parse_exp(&name, e2, &my_clone.clone().into());
+            let mut val = parse_exp(&my_clone.raw_get(2), e2, &my_clone.clone().into());
+            if let Some(setter) = &my_clone.setter {
+                val = ParsedResult::Normal(setter.clone());
             }
-            _ => Box::new(move |mut e2| {
-                let v = parse_exp(&s.first(), e2, &s.clone().into());
-                let t2 = s.get_function_call_args_indexed(e2, &s.first());
-                match t2 {
-                    Ok(call_args) => {
-                        match v {
-                            ParsedResult::Table(tab) => {
-                                let f_func = tab.value();
-                                if let DefaultTypes::Function(m_func) = f_func {
-                                    m_func.call(&mut e2, call_args);
-                                }
-                            }
-                            _ => {
-                                let found_func = e2.get(&s.first()).unwrap();
-                                if let DefaultTypes::Function(m_func) = found_func {
-                                    m_func.call(&mut e2, call_args);
-                                }
-                            }
+            match val {
+                ParsedResult::Table(v) => {
+                    match setted {
+                        ParsedResult::Table(table) => {
+                            e2.set_variable(table.name(), table.set(v.value()));
+                        }
+                        ParsedResult::Error(_) | ParsedResult::Normal(_) => {
+                            e2.set_variable(&name, v.value());
                         }
                     }
-                    Err(err_msg) => {
-                        println!("{} - Line {}", err_msg, s.line());
-                        e2.exit();
+                },
+                ParsedResult::Normal(s) => {
+                    match setted {
+                        ParsedResult::Table(table) => {
+                            e2.set_variable(table.name(), table.set(s));
+                        }
+                        ParsedResult::Error(_) | ParsedResult::Normal(_) => {
+                            e2.set_variable(&name, s);
+                        }
+                    }
+                },
+                ParsedResult::Error(s) => {
+                    e2.exit(&s, my_clone.line);
+                }
+            }
+        })
+    }
+
+    fn raw_func(&self, my_clone: StatementImpl) -> Box<dyn Fn(&mut Env)> {
+        Box::new(move |mut e2| {
+            e2.setline(my_clone.line);
+            let first_word = my_clone.first();
+            let without_parenthesis = first_word.split('(').next();
+            if without_parenthesis.is_none() {
+                e2.exit("Empty expression", my_clone.line)
+            }
+            let v = parse_exp(&without_parenthesis.unwrap(), e2, &my_clone.clone().into());
+            let t2 = my_clone.get_function_call_args_indexed(e2, &my_clone.first());
+            match t2 {
+                Ok(call_args) => {
+                    match v {
+                        ParsedResult::Table(tab) => {
+                            let f_func = tab.value();
+                            if let DefaultTypes::Function(m_func) = f_func {
+                                m_func.call(&mut e2, call_args);
+                            } else {
+                                e2.exit("Expected function", my_clone.line)
+                            }
+                        }
+                        _ => {
+                            let searched_func = e2.get(&my_clone.first());
+                            if searched_func.is_none() {
+                                e2.exit("Attempted to use undeclared variable", my_clone.line);
+                            }
+                            let found_func = searched_func.unwrap(); // This should never error
+                            if let DefaultTypes::Function(m_func) = found_func {
+                                m_func.call(&mut e2, call_args);
+                            } else {
+                                e2.exit("Expected function", my_clone.line)
+                            }
+                        }
                     }
                 }
-            }),
+                Err(err_msg) => {
+                    e2.exit(&err_msg, my_clone.line);
+                }
+            }
+        })
+    }
+    pub fn as_func(&self) -> Box<dyn Fn(&mut Env)> {
+        let s = self.clone();
+        return match s.raw_get(1).as_str() {
+            "->" | "=" => self.assignment(s),
+            _ => self.raw_func(s)
         }
     }
 }
